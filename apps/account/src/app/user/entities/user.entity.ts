@@ -18,22 +18,19 @@ export class UserEntity implements IUser {
 		this.courses = user.courses;
 	}
 
-	public addCourse(courseId: string) {
+	public setCourseStatus(courseId: string, state: PurchaseState) {
 		const exist = this.courses.find((c) => c._id === courseId);
-		if (exist) {
-			throw new Error('Добавляемый курс уже существует');
+		if (!exist) {
+			this.courses.push({
+				courseId,
+				purchaseState: state,
+			});
+			return this;
 		}
-		this.courses.push({
-			courseId,
-			purchaseState: PurchaseState.Started,
-		});
-	}
-
-	public deleteCourse(courseId: string) {
-		this.courses = this.courses.filter((c) => c._id !== courseId);
-	}
-
-	public updateCourseStatus(courseId: string, state: PurchaseState) {
+		if (state === PurchaseState.Canceled) {
+			this.courses = this.courses.filter((c) => c._id !== courseId);
+			return this;
+		}
 		this.courses = this.courses.map((c) => {
 			if (c._id === courseId) {
 				c.purchaseState = state;
@@ -41,6 +38,7 @@ export class UserEntity implements IUser {
 			}
 			return c;
 		});
+		return this;
 	}
 
 	public getPublicProfile() {
