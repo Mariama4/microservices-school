@@ -1,6 +1,11 @@
 import { BuyCourseSagaState } from './buy-course.state';
 import { UserEntity } from '../entities/user.entity';
-import { CourseGetCourse, PaymentCheck, PaymentGenerateLink } from '@school/contracts';
+import {
+	CourseGetCourse,
+	PaymentCheck,
+	PaymentGenerateLink,
+	PaymentStatus,
+} from '@school/contracts';
 import { PurchaseState } from '@school/interfaces';
 
 export class BuyCourseSagaStateStarted extends BuyCourseSagaState {
@@ -9,7 +14,7 @@ export class BuyCourseSagaStateStarted extends BuyCourseSagaState {
 		return { user: this.saga.user };
 	}
 
-	public checkPayment(): Promise<{ user: UserEntity }> {
+	public checkPayment(): Promise<{ user: UserEntity; status: PaymentStatus }> {
 		throw new Error('Нельзя проверить платеж, который не начался');
 	}
 
@@ -49,7 +54,7 @@ export class BuyCourseSagaStateWaitingForPayment extends BuyCourseSagaState {
 		throw new Error('Нельзя отменить платеж в процессе!');
 	}
 
-	public async checkPayment(): Promise<{ user: UserEntity }> {
+	public async checkPayment(): Promise<{ user: UserEntity; status: PaymentStatus }> {
 		const { status } = await this.saga.rmqService.send<
 			PaymentCheck.Request,
 			PaymentCheck.Response
@@ -59,13 +64,13 @@ export class BuyCourseSagaStateWaitingForPayment extends BuyCourseSagaState {
 		});
 		if (status === 'canceled') {
 			this.saga.setState(PurchaseState.Canceled, this.saga.courseId);
-			return { user: this.saga.user };
+			return { user: this.saga.user, status: 'canceled' };
 		}
 		if (status !== 'success') {
-			return { user: this.saga.user };
+			return { user: this.saga.user, status: 'success' };
 		}
 		this.saga.setState(PurchaseState.Purchased, this.saga.courseId);
-		return Promise.resolve({ user: undefined });
+		return Promise.resolve({ user: undefined, status: 'progress' });
 	}
 
 	public pay(): Promise<{ paymentLink: string; user: UserEntity }> {
@@ -78,7 +83,7 @@ export class BuyCourseSagaStatePurchased extends BuyCourseSagaState {
 		throw new Error('Нельзя отменить купленный курс');
 	}
 
-	public checkPayment(): Promise<{ user: UserEntity }> {
+	public checkPayment(): Promise<{ user: UserEntity; status: PaymentStatus }> {
 		throw new Error('Нельзя проверить платеж по купленному курсу');
 	}
 
@@ -92,7 +97,7 @@ export class BuyCourseSagaStateCanceled extends BuyCourseSagaState {
 		throw new Error('Нельзя отменить отмененный курс');
 	}
 
-	public checkPayment(): Promise<{ user: UserEntity }> {
+	public checkPayment(): Promise<{ user: UserEntity; status: PaymentStatus }> {
 		throw new Error('Нельзя проверить платеж по отмененному курсу');
 	}
 

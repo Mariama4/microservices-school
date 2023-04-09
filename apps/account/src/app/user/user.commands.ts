@@ -1,12 +1,16 @@
 import { Body, Controller } from '@nestjs/common';
-import { RMQRoute, RMQValidate } from 'nestjs-rmq';
+import { RMQRoute, RMQService, RMQValidate } from 'nestjs-rmq';
 import { AccountBuyCourse, AccountChangeProfile, AccountCheckPayment } from '@school/contracts';
 import { UserRepository } from './repositories/user.repository';
 import { UserEntity } from './entities/user.entity';
+import { BuyCourseSaga } from './sagas/buy-course.saga';
 
 @Controller()
 export class UserCommands {
-	constructor(private readonly userRepository: UserRepository) {}
+	constructor(
+		private readonly userRepository: UserRepository,
+		private readonly rmqService: RMQService,
+	) {}
 	@RMQValidate()
 	@RMQRoute(AccountChangeProfile.topic)
 	async userInfo(
@@ -26,7 +30,15 @@ export class UserCommands {
 	async buyCourse(
 		@Body() { userId, courseId }: AccountBuyCourse.Request,
 	): Promise<AccountBuyCourse.Response> {
-		return { paymentUrl: '' };
+		const existedUser = await this.userRepository.findUserById(userId);
+		if (!existedUser) {
+			throw new Error('Такого пользователя нет');
+		}
+		const userEntity = new UserEntity(existedUser);
+		const saga = new BuyCourseSaga(userEntity, courseId, this.rmqService);
+		const { user, paymentLink } = await saga.getState().pay();
+		await this.userRepository.updateUser(user);
+		return { paymentLink };
 	}
 
 	@RMQValidate()
@@ -34,6 +46,14 @@ export class UserCommands {
 	async checkPayment(
 		@Body() { userId, courseId }: AccountCheckPayment.Request,
 	): Promise<AccountCheckPayment.Response> {
-		return { status: undefined };
+		const existedUser = await this.userRepository.findUserById(userId);
+		if (!existedUser) {
+			throw new Error('Такого пользователя нет');
+		}
+		const userEntity = new UserEntity(existedUser);
+		const saga = new BuyCourseSaga(userEntity, courseId, this.rmqService);
+		const { user, status } = await saga.getState().checkPayment();
+		await this.userRepository.updateUser(user);
+		return { status };
 	}
 }
