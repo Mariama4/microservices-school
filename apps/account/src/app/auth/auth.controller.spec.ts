@@ -10,7 +10,7 @@ import { UserRepository } from '../user/repositories/user.repository';
 import { AccountLogin, AccountRegister } from '@school/contracts';
 
 const authLogin: AccountLogin.Request = {
-	email: 'geo@geo.ru',
+	email: 'geo0@geo0.ru',
 	password: '1',
 };
 
