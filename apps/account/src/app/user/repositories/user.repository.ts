@@ -26,6 +26,6 @@ export class UserRepository {
 	}
 
 	async deleteUser(email: string) {
-		return this.userModel.findByIdAndDelete({ email }).exec();
+		return this.userModel.deleteOne({ email }).exec();
 	}
 }

@@ -7,11 +7,7 @@ export class UserCourses extends Document implements IUserCourses {
 	@Prop({ required: true })
 	courseId: string;
 
-	@Prop({
-		required: true,
-		enum: PurchaseState,
-		type: String,
-	})
+	@Prop({ required: true, enum: PurchaseState, type: String })
 	purchaseState: PurchaseState;
 }
 
@@ -28,12 +24,7 @@ export class User extends Document implements IUser {
 	@Prop({ required: true })
 	passwordHash: string;
 
-	@Prop({
-		required: true,
-		enum: UserRole,
-		type: String,
-		default: UserRole.Student,
-	})
+	@Prop({ required: true, enum: UserRole, type: String, default: UserRole.Student })
 	role: UserRole;
 
 	@Prop({ type: [UserCoursesSchema], _id: false })
